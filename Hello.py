@@ -1,51 +1,92 @@
-# Copyright (c) Streamlit Inc. (2018-2022) Snowflake Inc. (2022)
-#
-# Licensed under the Apache License, Version 2.0 (the "License");
-# you may not use this file except in compliance with the License.
-# You may obtain a copy of the License at
-#
-#     http://www.apache.org/licenses/LICENSE-2.0
-#
-# Unless required by applicable law or agreed to in writing, software
-# distributed under the License is distributed on an "AS IS" BASIS,
-# WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
-# See the License for the specific language governing permissions and
-# limitations under the License.
-
 import streamlit as st
-from streamlit.logger import get_logger
+import plotly.express as px 
+import pandas as pd
 
-LOGGER = get_logger(__name__)
+# configuration
+st.set_option('deprecation.showfileUploaderEncoding', False)
 
+# title of the app
+st.title("Data Visualization on IT job market")
 
-def run():
-    st.set_page_config(
-        page_title="Hello",
-        page_icon="👋",
-    )
+# Add a sidebar
+st.sidebar.subheader("Visualization Settings")
 
-    st.write("# Welcome to Streamlit! 👋")
+# Setup file upload
+uploaded_file = st.sidebar.file_uploader(
+                        label="Upload your CSV or Excel file. (200MB max)",
+                         type=['csv', 'xlsx'])
 
-    st.sidebar.success("Select a demo above.")
+global df
+if uploaded_file is not None:
+    print(uploaded_file)
+    print("hello")
 
-    st.markdown(
-        """
-        Streamlit is an open-source app framework built specifically for
-        Machine Learning and Data Science projects.
-        **👈 Select a demo from the sidebar** to see some examples
-        of what Streamlit can do!
-        ### Want to learn more?
-        - Check out [streamlit.io](https://streamlit.io)
-        - Jump into our [documentation](https://docs.streamlit.io)
-        - Ask a question in our [community
-          forums](https://discuss.streamlit.io)
-        ### See more complex demos
-        - Use a neural net to [analyze the Udacity Self-driving Car Image
-          Dataset](https://github.com/streamlit/demo-self-driving)
-        - Explore a [New York City rideshare dataset](https://github.com/streamlit/demo-uber-nyc-pickups)
-    """
-    )
+    try:
+        df = pd.read_csv(uploaded_file)
+    except Exception as e:
+        print(e)
+        df = pd.read_excel(uploaded_file)
 
+global numeric_columns
+global non_numeric_columns
+try:
+    st.write(df)
+    numeric_columns = list(df.select_dtypes(['float', 'int']).columns)
+    non_numeric_columns = list(df.select_dtypes(['object']).columns)
+    non_numeric_columns.append(None)
+    print(non_numeric_columns)
+except Exception as e:
+    print(e)
+    st.write("Please upload file to the application.")
 
-if __name__ == "__main__":
-    run()
+# add a select widget to the side bar
+chart_select = st.sidebar.selectbox(
+    label="Select the chart type",
+    options=['Scatterplots', 'Lineplots', 'Histogram', 'Boxplot']
+)
+
+if chart_select == 'Scatterplots':
+    st.sidebar.subheader("Scatterplot Settings")
+    try:
+        x_values = st.sidebar.selectbox('X axis', options=numeric_columns)
+        y_values = st.sidebar.selectbox('Y axis', options=non_numeric_columns)
+        color_value = st.sidebar.selectbox("Color", options=non_numeric_columns)
+        plot = px.scatter(data_frame=df, x=x_values, y=y_values, color=color_value)
+        # display the chart
+        st.plotly_chart(plot)
+    except Exception as e:
+        print(e)
+
+if chart_select == 'Lineplots':
+    st.sidebar.subheader("Line Plot Settings")
+    try:
+        x_values = st.sidebar.selectbox('X axis', options=numeric_columns)
+        y_values = st.sidebar.selectbox('Y axis', options=numeric_columns)
+        color_value = st.sidebar.selectbox("Color", options=non_numeric_columns)
+        plot = px.line(data_frame=df, x=x_values, y=y_values, color=color_value)
+        st.plotly_chart(plot)
+    except Exception as e:
+        print(e)
+
+if chart_select == 'Histogram':
+    st.sidebar.subheader("Histogram Settings")
+    try:
+        x = st.sidebar.selectbox('Feature', options=numeric_columns)
+        bin_size = st.sidebar.slider("Number of Bins", min_value=10,
+                                     max_value=100, value=40)
+        color_value = st.sidebar.selectbox("Color", options=non_numeric_columns)
+        plot = px.histogram(x=x, data_frame=df, color=color_value)
+        st.plotly_chart(plot)
+    except Exception as e:
+        print(e)
+
+if chart_select == 'Boxplot':
+    st.sidebar.subheader("Boxplot Settings")
+    try:
+        y = st.sidebar.selectbox("Y axis", options=numeric_columns)
+        x = st.sidebar.selectbox("X axis", options=non_numeric_columns)
+        color_value = st.sidebar.selectbox("Color", options=non_numeric_columns)
+        plot = px.box(data_frame=df, y=y, x=x, color=color_value)
+        st.plotly_chart(plot)
+    except Exception as e:
+        print(e)
